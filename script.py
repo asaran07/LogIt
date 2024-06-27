@@ -1,9 +1,19 @@
 import curses
+from curses import (
+    COLOR_BLACK,
+    COLOR_CYAN,
+    COLOR_GREEN,
+    COLOR_MAGENTA,
+    COLOR_WHITE,
+    COLOR_YELLOW,
+    panel,
+)
 
 activities = []
 
 
 def main_menu(stdscr):
+    curses.curs_set(0)
     menu = ["Log Time", "View Logs"]
     current_row = 0
 
@@ -12,10 +22,10 @@ def main_menu(stdscr):
         for idx, row in enumerate(menu):
             if idx == selected_row_idx:
                 stdscr.attron(curses.color_pair(1))
-                stdscr.addstr(idx, 0, row)
+                stdscr.addstr(idx + 1, 2, row)
                 stdscr.attroff(curses.color_pair(1))
             else:
-                stdscr.addstr(idx, 0, row)
+                stdscr.addstr(idx + 1, 2, row)
         stdscr.refresh()
 
     curses.start_color()
@@ -79,6 +89,7 @@ def log_time_menu(stdscr):
 
 
 def activity_creation_menu(stdscr):
+    curses.curs_set(1)
     curses.echo()
     stdscr.clear()
     stdscr.addstr(0, 0, "Enter Activity Name: ")
@@ -87,12 +98,14 @@ def activity_creation_menu(stdscr):
     activity_type = stdscr.getstr().decode("utf-8")
     activities.append(activity_name)
     stdscr.addstr(3, 0, "Activity created")
+    curses.curs_set(0)
     stdscr.refresh()
     curses.napms(1000)
     curses.noecho()
 
 
 def log_activity_menu(stdscr, activity):
+    curses.curs_set(1)
     curses.echo()
     stdscr.clear()
     stdscr.addstr(0, 0, f"Log data for {activity}")
@@ -120,11 +133,49 @@ def logs_menu(stdscr):
     stdscr.getch()
 
 
+def run(stdscr):
+    screen_height, screen_width = stdscr.getmaxyx()
+    win_height = 40
+    win_width = 120
+
+    curses.start_color()
+    curses.init_pair(1, COLOR_WHITE, COLOR_BLACK)
+    curses.init_pair(2, COLOR_GREEN, COLOR_BLACK)
+
+    # Calculate top-left corner coordinates to center the window
+    start_y = (screen_height // 2) - (win_height // 2)
+    start_x = (screen_width // 2) - (win_width // 2)
+
+    main_window = curses.newwin(win_height, win_width, start_y, start_x)
+    main_window.attron(curses.color_pair(1))
+    main_window.box()
+    main_window.attroff(curses.color_pair(1))
+
+    main_window.attron(curses.color_pair(2))
+    main_window.addstr(2, 3, "Welcome to LogIt")
+    main_window.attroff(curses.color_pair(2))
+
+    main_panel = panel.new_panel(main_window)
+
+    # Initially update the panel to show it
+    panel.update_panels()
+    curses.doupdate()
+
+    while True:
+        key = stdscr.getch()
+        if key == ord("q"):
+            break
+
+        panel.update_panels()
+        curses.doupdate()
+
+
 def main(stdscr):
-    curses.curs_set(0)
+    curses.curs_set(0)  # Hide cursor
     stdscr.clear()
     stdscr.refresh()
-    main_menu(stdscr)
+    run(stdscr)
 
 
+# Start application
 curses.wrapper(main)
