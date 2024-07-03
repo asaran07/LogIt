@@ -9,6 +9,8 @@ from curses import (
     panel,
 )
 
+from window_utils import Window
+
 activities = []
 
 
@@ -29,7 +31,7 @@ def main_menu(stdscr):
         stdscr.refresh()
 
     curses.start_color()
-    curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_WHITE)
+    curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_WHITE)
 
     print_menu(stdscr, current_row)
 
@@ -133,40 +135,19 @@ def logs_menu(stdscr):
     stdscr.getch()
 
 
-def run(stdscr):
-    screen_height, screen_width = stdscr.getmaxyx()
-    win_height = 40
-    win_width = 120
-
-    curses.start_color()
-    curses.init_pair(1, COLOR_WHITE, COLOR_BLACK)
-    curses.init_pair(2, COLOR_GREEN, COLOR_BLACK)
-
-    # Calculate top-left corner coordinates to center the window
-    start_y = (screen_height // 2) - (win_height // 2)
-    start_x = (screen_width // 2) - (win_width // 2)
-
-    main_window = curses.newwin(win_height, win_width, start_y, start_x)
-    main_window.attron(curses.color_pair(1))
-    main_window.box()
-    main_window.attroff(curses.color_pair(1))
-
-    main_window.attron(curses.color_pair(2))
-    main_window.addstr(2, 3, "Welcome to LogIt")
-    main_window.attroff(curses.color_pair(2))
-
-    main_panel = panel.new_panel(main_window)
-
-    # Initially update the panel to show it
-    panel.update_panels()
-    curses.doupdate()
+def run2(stdscr):
+    title_window = Window(40, 120)
+    title_window.center_window(stdscr)
+    title_window.add_title(2, 4, "Welcome to LogIt")
+    title_window.add_border()
+    title_window.add_text(4, 5, "Please select from the following: ")
 
     while True:
         key = stdscr.getch()
         if key == ord("q"):
             break
 
-        panel.update_panels()
+        # panel.update_panels()
         curses.doupdate()
 
 
@@ -174,7 +155,7 @@ def main(stdscr):
     curses.curs_set(0)  # Hide cursor
     stdscr.clear()
     stdscr.refresh()
-    run(stdscr)
+    run2(stdscr)
 
 
 # Start application
