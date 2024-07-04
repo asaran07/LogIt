@@ -98,18 +98,18 @@ def log_time_menu2(window, stdscr):
     def print_menu(stdscr, selected_row_idx):
         window.window.clear()
         if len(activities) == 0:
-            window.window.addstr(5, 8, "No Activities Started")
+            window.window.addstr(5, 8, "[No Activities Started]")
         else:
             for idx, activity in enumerate(activities):
                 if idx == selected_row_idx:
                     window.window.attron(curses.color_pair(1))
-                    window.window.addstr(idx + 5, 8, activity)
+                    window.window.addstr(idx + 6, 8, "> " + activity)
                     window.window.attroff(curses.color_pair(1))
                 else:
-                    window.window.addstr(idx + 5, 8, activity)
-        draw_title_menu(window, stdscr)
-        window.window.addstr(len(activities) + 5, 8, "Create new activity (press 'n')")
-        window.window.addstr(len(activities) + 6, 8, "Go to main menu (press 'x')")
+                    window.window.addstr(idx + 6, 8, activity)
+        draw_logit_menu(window, stdscr)
+        window.window.addstr(35, 8, "Create new activity (press 'n')")
+        window.window.addstr(36, 8, "Go to main menu (press 'x')")
         window.refresh()
 
     print_menu(stdscr, current_row)
@@ -186,9 +186,9 @@ def draw_title_menu(window, stdscr):
 
 def draw_logit_menu(window, stdscr):
     window.center_window(stdscr)
-    window.add_title(2, 4, "Welcome to LogIt")
+    window.add_title(2, 4, "Create a log")
     window.add_border()
-    window.add_text(4, 6, "Please select from the following: ")
+    window.add_text(4, 6, "What activity to create a log for?")
 
 
 def run2(stdscr):
