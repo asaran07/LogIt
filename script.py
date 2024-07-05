@@ -1,5 +1,8 @@
 import curses
+import os
+import pickle
 
+from activity import Activity
 from window_utils import Window
 
 # Constants for menu titles and messages
@@ -26,6 +29,21 @@ ENGAGEMENT_LABEL = "Engagement: "
 
 
 activities = []
+SAVE_FILE = "activities.pkl"
+
+
+def save_activities():
+    with open(SAVE_FILE, "wb") as f:
+        pickle.dump(activities, f)
+
+
+def load_activities():
+    global activities
+    if os.path.exists(SAVE_FILE):
+        with open(SAVE_FILE, "rb") as f:
+            activities = pickle.load(f)
+    else:
+        activities = []
 
 
 def log_time_menu2(window: Window, stdscr):
@@ -38,13 +56,12 @@ def log_time_menu2(window: Window, stdscr):
             window.add_text(2, NO_ACT_STARTED)
         else:
             for idx, activity in enumerate(activities):
-                activity_name = activity["name"]
                 if idx == selected_row_idx:
                     window.startColoring(1)
-                    window.window.addstr(idx + 6, 8, "> " + activity_name)
+                    window.window.addstr(idx + 6, 8, "> " + activity.name)
                     window.stopColoring(1)
                 else:
-                    window.window.addstr(idx + 6, 8, activity_name)
+                    window.window.addstr(idx + 6, 8, activity.name)
 
         draw_logit_menu(window, stdscr)
         window.add_text(3, "Create new activity (press 'n')")
@@ -90,7 +107,7 @@ def activity_creation_menu(window: Window, stdscr):
 
     if activity_name:
         # Add activity to the list
-        activities.append({"name": activity_name, "logs": []})
+        activities.append(Activity(activity_name))
 
         # Show confirmation
         window.emptyOut()
@@ -102,9 +119,9 @@ def activity_creation_menu(window: Window, stdscr):
     stdscr.getch()  # Wait for user input before returning
 
 
-def log_activity_menu(window: Window, stdscr, activity):
+def log_activity_menu(window: Window, stdscr, activity: Activity):
     window.emptyOut()
-    window.add_title(2, 4, f"{LOG_DATA_FOR + activity['name']}")
+    window.add_title(2, 4, f"{LOG_DATA_FOR + activity.__str__()}")
     enable_input()
 
     duration = window.getInputWprompt(DURATION_PROMPT, MAX_CHARS)
@@ -114,12 +131,12 @@ def log_activity_menu(window: Window, stdscr, activity):
     window.window.move(6, 8)
     engagement = window.getInput(MAX_CHARS)
 
-    activity["logs"].append({"duration": duration, "engagement": engagement})
+    activity.add_log(duration, engagement)
 
     # Log confirmation
     window.emptyOut()
     window.add_title(2, 4, ACT_LOGGED)
-    window.add_text(1, f"{ACTIVITY_LABEL + activity['name']}")
+    window.add_text(1, f"{ACTIVITY_LABEL + activity.__str__()}")
     window.add_text(2, f"{DURATION_LABEL + duration + DURATION_UNIT}")
     window.window.addstr(6, 8, f"{ENGAGEMENT_LABEL + engagement}")
     window.add_text(4, KEY_FOR_CONTINUE)
@@ -133,10 +150,13 @@ def logs_menu(stdscr):
         stdscr.addstr(1, 0, "No Activities Logged")
     else:
         for idx, activity in enumerate(activities):
-            num_logs = len(activity["logs"])
-            stdscr.addstr(
-                idx + 1, 0, f"{activity['name']}: {num_logs} logs"
-            )  # Placeholder summary
+            stdscr.addstr(idx * 3 + 1, 0, f"{activity.name}: {len(activity.logs)} logs")
+            for log_idx, log in enumerate(activity.logs):
+                stdscr.addstr(
+                    idx * 3 + 2 + log_idx,
+                    2,
+                    f"Duration: {log['duration']} minutes, Engagement: {log['engagement']}",
+                )
     stdscr.refresh()
     stdscr.getch()
 
@@ -203,7 +223,9 @@ def main(stdscr):
     curses.curs_set(0)  # Hide cursor
     stdscr.clear()
     stdscr.refresh()
+    load_activities()
     run2(stdscr)
+    save_activities()
 
 
 # Start application
