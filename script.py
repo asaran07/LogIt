@@ -1,94 +1,14 @@
 import curses
-from curses import (
-    COLOR_BLACK,
-    COLOR_CYAN,
-    COLOR_GREEN,
-    COLOR_MAGENTA,
-    COLOR_WHITE,
-    COLOR_YELLOW,
-    panel,
-)
 
 from window_utils import Window
 
+# Constants for menu titles and messages
+TITLE_WELCOME = "Welcome to LogIt"
+TITLE_CREATE_LOG = "Create a log"
+MSG_SELECT_ACTIVITY = "What activity to create a log for?"
+MSG_SELECT_OPTIONS = "Please select from the following: "
+
 activities = []
-
-
-def main_menu(stdscr):
-    curses.curs_set(0)
-    menu = ["Log Time", "View Logs"]
-    current_row = 0
-
-    def print_menu(stdscr, selected_row_idx):
-        stdscr.clear()
-        for idx, row in enumerate(menu):
-            if idx == selected_row_idx:
-                stdscr.attron(curses.color_pair(1))
-                stdscr.addstr(idx + 1, 2, row)
-                stdscr.attroff(curses.color_pair(1))
-            else:
-                stdscr.addstr(idx + 1, 2, row)
-        stdscr.refresh()
-
-    curses.start_color()
-    curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_WHITE)
-
-    print_menu(stdscr, current_row)
-
-    while True:
-        key = stdscr.getch()
-        if key == curses.KEY_UP and current_row > 0:
-            current_row -= 1
-        elif key == curses.KEY_DOWN and current_row < len(menu) - 1:
-            current_row += 1
-        elif key == ord("\n"):
-            if current_row == 0:
-                log_time_menu(stdscr)
-            elif current_row == 1:
-                logs_menu(stdscr)
-        elif key == ord("q"):
-            break
-
-        print_menu(stdscr, current_row)
-
-
-def log_time_menu(stdscr):
-    current_row = 0
-
-    def print_menu(stdscr, selected_row_idx):
-        stdscr.clear()
-        if len(activities) == 0:
-            stdscr.addstr(0, 0, "No Activities Started")
-        else:
-            for idx, activity in enumerate(activities):
-                if idx == selected_row_idx:
-                    stdscr.attron(curses.color_pair(1))
-                    stdscr.addstr(idx, 0, activity)
-                    stdscr.attroff(curses.color_pair(1))
-                else:
-                    stdscr.addstr(idx, 0, activity)
-        stdscr.addstr(len(activities), 0, "Create new activity (press 'n')")
-        stdscr.addstr(len(activities) + 1, 0, "Go to main menu (press 'x')")
-        stdscr.refresh()
-
-    print_menu(stdscr, current_row)
-
-    while True:
-        key = stdscr.getch()
-        if key == curses.KEY_UP and current_row > 0:
-            current_row -= 1
-        elif key == curses.KEY_DOWN and current_row < len(activities):
-            current_row += 1
-        elif key == ord("\n") and current_row < len(activities):
-            log_activity_menu(stdscr, activities[current_row])
-        elif key == ord("n"):
-            activity_creation_menu(stdscr)
-            print_menu(stdscr, current_row)
-        elif key == ord("x"):
-            stdscr.clear()
-            break
-
-        print_menu(stdscr, current_row)
 
 
 def log_time_menu2(window, stdscr):
@@ -123,7 +43,7 @@ def log_time_menu2(window, stdscr):
         elif key == ord("\n") and current_row < len(activities):
             log_activity_menu(stdscr, activities[current_row])
         elif key == ord("n"):
-            activity_creation_menu(stdscr)
+            activity_creation_menu(window, stdscr)
             print_menu(stdscr, current_row)
         elif key == ord("x"):
             stdscr.clear()
@@ -132,20 +52,37 @@ def log_time_menu2(window, stdscr):
         print_menu(stdscr, current_row)
 
 
-def activity_creation_menu(stdscr):
-    curses.curs_set(1)
-    curses.echo()
-    stdscr.clear()
-    stdscr.addstr(0, 0, "Enter Activity Name: ")
-    activity_name = stdscr.getstr().decode("utf-8")
-    stdscr.addstr(1, 0, "Select Activity Type: [digital, physical, meeting, misc] ")
-    activity_type = stdscr.getstr().decode("utf-8")
-    activities.append(activity_name)
-    stdscr.addstr(3, 0, "Activity created")
-    curses.curs_set(0)
-    stdscr.refresh()
-    curses.napms(1000)
-    curses.noecho()
+def activity_creation_menu(window, stdscr):
+    window.window.clear()
+    window.add_border()
+    window.add_title(2, 4, "Create New Activity")
+
+    curses.echo()  # Enable echo for input
+    curses.curs_set(1)  # Show cursor
+
+    # Prompt for activity name
+    window.add_text(4, 5, "Enter Activity Name: ")
+    window.window.refresh()
+
+    # Get input using getstr()
+    window.window.move(5, 8)  # Move cursor to input position
+    activity_name = window.window.getstr(30).decode("utf-8")  # Limit to 30 characters
+
+    if activity_name:
+        # Add activity to the list
+        activities.append(activity_name)
+
+        # Show confirmation
+        window.window.clear()
+        window.add_border()
+        window.add_title(2, 4, "Activity Created")
+        window.add_text(4, 5, f"'{activity_name}' has been added to your activities.")
+        window.add_text(36, 8, "Press any key to continue...")
+        window.window.refresh()
+
+    curses.curs_set(0)  # Hide cursor
+    curses.noecho()  # Disable echo
+    stdscr.getch()  # Wait for user input before returning
 
 
 def log_activity_menu(stdscr, activity):
@@ -177,18 +114,19 @@ def logs_menu(stdscr):
     stdscr.getch()
 
 
-def draw_title_menu(window, stdscr):
+def draw_menu(window, stdscr, title, message):
     window.center_window(stdscr)
-    window.add_title(2, 4, "Welcome to LogIt")
+    window.add_title(2, 4, title)
     window.add_border()
-    window.add_text(4, 6, "Please select from the following: ")
+    window.add_text(4, 6, message)
+
+
+def draw_title_menu(window, stdscr):
+    draw_menu(window, stdscr, TITLE_WELCOME, MSG_SELECT_OPTIONS)
 
 
 def draw_logit_menu(window, stdscr):
-    window.center_window(stdscr)
-    window.add_title(2, 4, "Create a log")
-    window.add_border()
-    window.add_text(4, 6, "What activity to create a log for?")
+    draw_menu(window, stdscr, TITLE_CREATE_LOG, MSG_SELECT_ACTIVITY)
 
 
 def run2(stdscr):
