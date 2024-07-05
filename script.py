@@ -7,18 +7,23 @@ TITLE_WELCOME = "Welcome to LogIt"
 TITLE_CREATE_LOG = "Create a log"
 MSG_SELECT_ACTIVITY = "What activity to create a log for?"
 MSG_SELECT_OPTIONS = "Please select from the following: "
+CR_NEW_ACT = "Create New Activity"
+ENTR_ACT_NAME = "Enter Activity Name: "
+UTF8 = "utf-8"
+MAX_CHARS = 30
+NO_ACT_STARTED = "[No Activities Started]"
 
 activities = []
 
 
-def log_time_menu2(window, stdscr):
+def log_time_menu2(window: Window, stdscr):
     current_row = 0
     draw_title_menu(window, stdscr)
 
     def print_menu(stdscr, selected_row_idx):
-        window.window.clear()
+        window.clear()
         if len(activities) == 0:
-            window.window.addstr(5, 8, "[No Activities Started]")
+            window.add_text(2, NO_ACT_STARTED)
         else:
             for idx, activity in enumerate(activities):
                 if idx == selected_row_idx:
@@ -28,9 +33,8 @@ def log_time_menu2(window, stdscr):
                 else:
                     window.window.addstr(idx + 6, 8, activity)
         draw_logit_menu(window, stdscr)
-        window.window.addstr(35, 8, "Create new activity (press 'n')")
-        window.window.addstr(36, 8, "Go to main menu (press 'x')")
-        window.refresh()
+        window.add_text(3, "Create new activity (press 'n')")
+        window.add_text(4, "Go to main menu (press 'x')")
 
     print_menu(stdscr, current_row)
 
@@ -41,7 +45,7 @@ def log_time_menu2(window, stdscr):
         elif key == curses.KEY_DOWN and current_row < len(activities):
             current_row += 1
         elif key == ord("\n") and current_row < len(activities):
-            log_activity_menu(stdscr, activities[current_row])
+            log_activity_menu(window, stdscr, activities[current_row])
         elif key == ord("n"):
             activity_creation_menu(window, stdscr)
             print_menu(stdscr, current_row)
@@ -52,52 +56,77 @@ def log_time_menu2(window, stdscr):
         print_menu(stdscr, current_row)
 
 
-def activity_creation_menu(window, stdscr):
-    window.window.clear()
-    window.add_border()
-    window.add_title(2, 4, "Create New Activity")
+def enable_input():
+    """Enable echo and show cursor for input"""
+    curses.echo()
+    curses.curs_set(1)
 
-    curses.echo()  # Enable echo for input
-    curses.curs_set(1)  # Show cursor
+
+def activity_creation_menu(window: Window, stdscr):
+    window.emptyOut()
+    window.add_title(2, 4, CR_NEW_ACT)
+
+    enable_input()
 
     # Prompt for activity name
-    window.add_text(4, 5, "Enter Activity Name: ")
-    window.window.refresh()
+    window.add_text(1, ENTR_ACT_NAME)
+    window.refresh()
 
     # Get input using getstr()
     window.window.move(5, 8)  # Move cursor to input position
-    activity_name = window.window.getstr(30).decode("utf-8")  # Limit to 30 characters
+    activity_name = window.window.getstr(MAX_CHARS).decode(
+        UTF8
+    )  # Limit to 30 characters
 
     if activity_name:
         # Add activity to the list
         activities.append(activity_name)
 
         # Show confirmation
-        window.window.clear()
+        window.clear()
         window.add_border()
         window.add_title(2, 4, "Activity Created")
-        window.add_text(4, 5, f"'{activity_name}' has been added to your activities.")
-        window.add_text(36, 8, "Press any key to continue...")
-        window.window.refresh()
+        window.add_text(1, f"'{activity_name}' has been added to your activities.")
+        window.add_text(4, "Press any key to continue...")
+        window.refresh()
 
     curses.curs_set(0)  # Hide cursor
     curses.noecho()  # Disable echo
     stdscr.getch()  # Wait for user input before returning
 
 
-def log_activity_menu(stdscr, activity):
+def log_activity_menu(window, stdscr, activity):
     curses.curs_set(1)
     curses.echo()
-    stdscr.clear()
-    stdscr.addstr(0, 0, f"Log data for {activity}")
-    stdscr.addstr(1, 0, "Duration (minutes): ")
-    duration = stdscr.getstr().decode("utf-8")
-    stdscr.addstr(2, 0, "Engagement (0-5): ")
-    engagement = stdscr.getstr().decode("utf-8")
-    stdscr.addstr(4, 0, "Activity logged")
-    stdscr.refresh()
-    curses.napms(1000)
+    window.clear()
+    window.add_border()
+    window.add_title(2, 4, f"Log data for {activity}")
+
+    # Prompt for duration
+    window.add_text(1, "Duration (minutes): ")
+    window.refresh()
+    window.window.move(5, 8)
+    duration = window.window.getstr(30).decode("utf-8")
+
+    # Prompt for engagement
+    window.add_text(2, "Engagement (0-5): ")
+    window.refresh()
+    window.window.move(6, 8)
+    engagement = window.window.getstr(MAX_CHARS).decode(UTF8)
+
+    # Log confirmation
+    window.clear()
+    window.add_border()
+    window.add_title(2, 4, "Activity logged")
+    window.add_text(1, f"Activity: {activity}")
+    window.add_text(2, f"Duration: {duration} minutes")
+    window.window.addstr(6, 8, f"Engagement: {engagement}")
+    window.add_text(4, "Press any key to continue...")
+    window.refresh()
+
+    curses.curs_set(0)
     curses.noecho()
+    stdscr.getch()
 
 
 def logs_menu(stdscr):
@@ -114,11 +143,11 @@ def logs_menu(stdscr):
     stdscr.getch()
 
 
-def draw_menu(window, stdscr, title, message):
+def draw_menu(window: Window, stdscr, title, message):
     window.center_window(stdscr)
     window.add_title(2, 4, title)
     window.add_border()
-    window.add_text(4, 6, message)
+    window.add_text(1, message)
 
 
 def draw_title_menu(window, stdscr):
@@ -137,7 +166,7 @@ def run2(stdscr):
     current_row = 0
 
     def print_menu(selected_row_idx):
-        title_window.window.clear()
+        title_window.clear()
         height, width = title_window.window.getmaxyx()
         for idx, row in enumerate(menu):
             x = width // 2 - len(row) // 2
@@ -150,10 +179,6 @@ def run2(stdscr):
                 title_window.window.addstr(y, x, row)
         draw_title_menu(title_window, stdscr)
         title_window.refresh()
-
-    curses.start_color()
-    curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_WHITE)
-    curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK)
 
     print_menu(current_row)
 
