@@ -73,3 +73,14 @@ class Window:
 
     def getInput(self, max_characters) -> str:
         return self.window.getstr(max_characters).decode("utf-8")
+
+    def getInputWprompt(self, prompt_string: str, max_input_chars) -> str:
+        self.add_text(1, prompt_string)
+        self.window.move(5, 8)  # Move cursor to input position
+        return self.getInput(max_input_chars)
+
+    def startColoring(self, color_pair):
+        self.window.attron(curses.color_pair(color_pair))
+
+    def stopColoring(self, color_pair):
+        self.window.attroff(curses.color_pair(color_pair))

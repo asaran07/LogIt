@@ -13,6 +13,18 @@ UTF8 = "utf-8"
 MAX_CHARS = 30
 NO_ACT_STARTED = "[No Activities Started]"
 KEY_FOR_CONTINUE = "Press any key to continue..."
+ACT_CREATED = "Activity Created"
+ACT_ADDED = "' has been added to your activities."
+LOG_DATA_FOR = "Log data for "
+DURATION_PROMPT = "Duration (minutes): "
+ENGAGEMENT_PROMPT = "Engagement (0-5): "
+ACT_LOGGED = "Activity logged"
+ACTIVITY_LABEL = "Activity: "
+DURATION_LABEL = "Duration: "
+DURATION_UNIT = " minutes"
+ENGAGEMENT_LABEL = "Engagement: "
+
+
 activities = []
 
 
@@ -26,12 +38,14 @@ def log_time_menu2(window: Window, stdscr):
             window.add_text(2, NO_ACT_STARTED)
         else:
             for idx, activity in enumerate(activities):
+                activity_name = activity["name"]
                 if idx == selected_row_idx:
-                    window.window.attron(curses.color_pair(1))
-                    window.window.addstr(idx + 6, 8, "> " + activity)
-                    window.window.attroff(curses.color_pair(1))
+                    window.startColoring(1)
+                    window.window.addstr(idx + 6, 8, "> " + activity_name)
+                    window.stopColoring(1)
                 else:
-                    window.window.addstr(idx + 6, 8, activity)
+                    window.window.addstr(idx + 6, 8, activity_name)
+
         draw_logit_menu(window, stdscr)
         window.add_text(3, "Create new activity (press 'n')")
         window.add_text(4, "Go to main menu (press 'x')")
@@ -50,7 +64,6 @@ def log_time_menu2(window: Window, stdscr):
             activity_creation_menu(window, stdscr)
             print_menu(stdscr, current_row)
         elif key == ord("x"):
-            stdscr.clear()
             break
 
         print_menu(stdscr, current_row)
@@ -71,25 +84,19 @@ def disable_input():
 def activity_creation_menu(window: Window, stdscr):
     window.emptyOut()
     window.add_title(2, 4, CR_NEW_ACT)
-
     enable_input()
 
-    # Prompt for activity name
-    window.add_text(1, ENTR_ACT_NAME)
-    window.refresh()
-    window.window.move(5, 8)  # Move cursor to input position
-    activity_name = window.getInput(MAX_CHARS)
+    activity_name = window.getInputWprompt(ENTR_ACT_NAME, MAX_CHARS)
 
     if activity_name:
         # Add activity to the list
-        activities.append(activity_name)
+        activities.append({"name": activity_name, "logs": []})
 
         # Show confirmation
         window.emptyOut()
-        window.add_title(2, 4, "Activity Created")
-        window.add_text(1, f"'{activity_name}' has been added to your activities.")
+        window.add_title(2, 4, ACT_CREATED)
+        window.add_text(1, f"'{activity_name}" + ACT_ADDED)
         window.add_text(4, KEY_FOR_CONTINUE)
-        window.refresh()
 
     disable_input()
     stdscr.getch()  # Wait for user input before returning
@@ -97,44 +104,38 @@ def activity_creation_menu(window: Window, stdscr):
 
 def log_activity_menu(window: Window, stdscr, activity):
     window.emptyOut()
-    window.add_title(2, 4, f"Log data for {activity}")
-
+    window.add_title(2, 4, f"{LOG_DATA_FOR + activity['name']}")
     enable_input()
 
-    # Prompt for duration
-    window.add_text(1, "Duration (minutes): ")
-    window.refresh()
-    window.window.move(5, 8)
-    duration = window.window.getstr(30).decode("utf-8")
+    duration = window.getInputWprompt(DURATION_PROMPT, MAX_CHARS)
 
-    # Prompt for engagement
-    window.add_text(2, "Engagement (0-5): ")
-    window.refresh()
+    # Prompt for engagement, need to add function for window to do more than one prompt.
+    window.add_text(2, ENGAGEMENT_PROMPT)
     window.window.move(6, 8)
     engagement = window.getInput(MAX_CHARS)
 
+    activity["logs"].append({"duration": duration, "engagement": engagement})
+
     # Log confirmation
     window.emptyOut()
-    window.add_title(2, 4, "Activity logged")
-    window.add_text(1, f"Activity: {activity}")
-    window.add_text(2, f"Duration: {duration} minutes")
-    window.window.addstr(6, 8, f"Engagement: {engagement}")
-    window.add_text(4, "Press any key to continue...")
-    window.refresh()
+    window.add_title(2, 4, ACT_LOGGED)
+    window.add_text(1, f"{ACTIVITY_LABEL + activity['name']}")
+    window.add_text(2, f"{DURATION_LABEL + duration + DURATION_UNIT}")
+    window.window.addstr(6, 8, f"{ENGAGEMENT_LABEL + engagement}")
+    window.add_text(4, KEY_FOR_CONTINUE)
 
     disable_input()
     stdscr.getch()
 
 
 def logs_menu(stdscr):
-    stdscr.clear()
-    stdscr.addstr(0, 0, "Logs Menu - Work in Progress")
     if len(activities) == 0:
         stdscr.addstr(1, 0, "No Activities Logged")
     else:
         for idx, activity in enumerate(activities):
+            num_logs = len(activity["logs"])
             stdscr.addstr(
-                idx + 1, 0, f"{activity}: {idx + 1} logs"
+                idx + 1, 0, f"{activity['name']}: {num_logs} logs"
             )  # Placeholder summary
     stdscr.refresh()
     stdscr.getch()
@@ -159,7 +160,7 @@ def run2(stdscr):
     title_window = Window(40, 120)
     draw_title_menu(title_window, stdscr)
     curses.curs_set(0)
-    menu = ["Log Time", "View Logs"]
+    menu = ["Log Time", "View Logs", "Exit"]
     current_row = 0
 
     def print_menu(selected_row_idx):
@@ -169,9 +170,9 @@ def run2(stdscr):
             x = width // 2 - len(row) // 2
             y = height // 2 - len(menu) // 2 + idx
             if idx == selected_row_idx:
-                title_window.window.attron(curses.color_pair(1))
+                title_window.startColoring(1)
                 title_window.window.addstr(y, x, row)
-                title_window.window.attroff(curses.color_pair(1))
+                title_window.stopColoring(1)
             else:
                 title_window.window.addstr(y, x, row)
         draw_title_menu(title_window, stdscr)
@@ -190,6 +191,8 @@ def run2(stdscr):
                 log_time_menu2(title_window, stdscr)
             elif current_row == 1:
                 logs_menu(stdscr)
+            elif current_row == 2:
+                break
         elif key == ord("q"):
             break
 
