@@ -12,7 +12,7 @@ ENTR_ACT_NAME = "Enter Activity Name: "
 UTF8 = "utf-8"
 MAX_CHARS = 30
 NO_ACT_STARTED = "[No Activities Started]"
-
+KEY_FOR_CONTINUE = "Press any key to continue..."
 activities = []
 
 
@@ -57,9 +57,15 @@ def log_time_menu2(window: Window, stdscr):
 
 
 def enable_input():
-    """Enable echo and show cursor for input"""
+    """Enable echo and show cursor."""
     curses.echo()
     curses.curs_set(1)
+
+
+def disable_input():
+    """Disable echo and hide cursor."""
+    curses.curs_set(0)
+    curses.noecho()
 
 
 def activity_creation_menu(window: Window, stdscr):
@@ -71,36 +77,29 @@ def activity_creation_menu(window: Window, stdscr):
     # Prompt for activity name
     window.add_text(1, ENTR_ACT_NAME)
     window.refresh()
-
-    # Get input using getstr()
     window.window.move(5, 8)  # Move cursor to input position
-    activity_name = window.window.getstr(MAX_CHARS).decode(
-        UTF8
-    )  # Limit to 30 characters
+    activity_name = window.getInput(MAX_CHARS)
 
     if activity_name:
         # Add activity to the list
         activities.append(activity_name)
 
         # Show confirmation
-        window.clear()
-        window.add_border()
+        window.emptyOut()
         window.add_title(2, 4, "Activity Created")
         window.add_text(1, f"'{activity_name}' has been added to your activities.")
-        window.add_text(4, "Press any key to continue...")
+        window.add_text(4, KEY_FOR_CONTINUE)
         window.refresh()
 
-    curses.curs_set(0)  # Hide cursor
-    curses.noecho()  # Disable echo
+    disable_input()
     stdscr.getch()  # Wait for user input before returning
 
 
-def log_activity_menu(window, stdscr, activity):
-    curses.curs_set(1)
-    curses.echo()
-    window.clear()
-    window.add_border()
+def log_activity_menu(window: Window, stdscr, activity):
+    window.emptyOut()
     window.add_title(2, 4, f"Log data for {activity}")
+
+    enable_input()
 
     # Prompt for duration
     window.add_text(1, "Duration (minutes): ")
@@ -112,11 +111,10 @@ def log_activity_menu(window, stdscr, activity):
     window.add_text(2, "Engagement (0-5): ")
     window.refresh()
     window.window.move(6, 8)
-    engagement = window.window.getstr(MAX_CHARS).decode(UTF8)
+    engagement = window.getInput(MAX_CHARS)
 
     # Log confirmation
-    window.clear()
-    window.add_border()
+    window.emptyOut()
     window.add_title(2, 4, "Activity logged")
     window.add_text(1, f"Activity: {activity}")
     window.add_text(2, f"Duration: {duration} minutes")
@@ -124,8 +122,7 @@ def log_activity_menu(window, stdscr, activity):
     window.add_text(4, "Press any key to continue...")
     window.refresh()
 
-    curses.curs_set(0)
-    curses.noecho()
+    disable_input()
     stdscr.getch()
 
 

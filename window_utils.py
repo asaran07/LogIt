@@ -70,3 +70,6 @@ class Window:
         """Clear the window and add default border"""
         self.clear()
         self.add_border()
+
+    def getInput(self, max_characters) -> str:
+        return self.window.getstr(max_characters).decode("utf-8")
