@@ -3,8 +3,10 @@ class Activity:
         self.name = name
         self.logs = []
 
-    def add_log(self, duration, engagement):
-        self.logs.append({"duration": duration, "engagement": engagement})
+    def add_log(self, log):
+        if log not in self.logs:
+            self.logs.append(log)
+            log.activity = self
 
     def __str__(self):
         return self.name
