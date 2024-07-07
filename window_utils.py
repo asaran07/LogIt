@@ -1,5 +1,5 @@
 import curses
-from curses import COLOR_BLACK, COLOR_GREEN, COLOR_WHITE, panel
+from curses import A_BLINK, A_DIM, COLOR_BLACK, COLOR_GREEN, COLOR_WHITE, panel
 from typing import Optional
 
 
@@ -130,14 +130,79 @@ class Window:
     def getInput(self, max_characters) -> str:
         return self.window.getstr(max_characters).decode("utf-8")
 
-    def getInputWprompt(self, prompt_string: str, max_input_chars) -> str:
-        self.add_text(4, 6, prompt_string)
-        self.refresh()
-        self.window.move(5, 6)  # Move cursor to input position
-        return self.getInput(max_input_chars)
-
     def startColoring(self, color_pair):
         self.window.attron(curses.color_pair(color_pair))
 
     def stopColoring(self, color_pair):
         self.window.attroff(curses.color_pair(color_pair))
+
+    def draw_border(self):
+        self.window.border()
+        self.refresh()
+
+    def getInputWprompt(
+        self, title_string: str, prompt_string: str, max_input_chars: int
+    ) -> str:
+        self.clear()
+        self.draw_border()
+        title_y, title_x = 2, 4
+        prompt_y, prompt_x = 4, 6
+        input_y, input_x = 5, 6
+        instruction_y = self.height - 3
+
+        self.add_title(title_y, title_x, title_string)
+        self.add_text(prompt_y, prompt_x, prompt_string)
+        self.add_text(
+            instruction_y,
+            6,
+            "Press Enter to finish or Esc to cancel",
+            attribute=curses.A_DIM,
+        )
+
+        input_str = ""
+        while True:
+            self.window.move(input_y, input_x)
+            self.window.clrtoeol()  # Clear the input line
+            self.window.addstr(input_y, input_x, input_str)
+            self.draw_border()  # Redraw border to fix any cleared parts
+            self.refresh()
+
+            char = self.window.getch()
+
+            if char == 27:  # Escape
+                curses.curs_set(0)
+                self.emptyOut()
+                self.add_text(
+                    2,
+                    4,
+                    "[i] log creation canceled",
+                    attribute=curses.A_BLINK | curses.A_BOLD | curses.A_ITALIC,
+                )
+                self.add_text(
+                    instruction_y,
+                    4,
+                    "returning to main menu...",
+                    attribute=curses.A_DIM,
+                )
+                self.refresh()
+                curses.napms(2000)
+                return ""
+            elif char == 10:  # Enter
+                if input_str:
+                    curses.curs_set(0)
+                    self.add_text(
+                        input_y + 2,
+                        input_x,
+                        "Input received!",
+                        attribute=curses.A_BOLD | curses.A_BLINK | curses.A_ITALIC,
+                    )
+                    self.refresh()
+                    curses.napms(800)  # Display message for 1 second
+                    curses.curs_set(1)
+                    return input_str
+            elif char == curses.KEY_BACKSPACE or char == 127:  # Backspace
+                input_str = input_str[:-1]
+            elif (
+                len(input_str) < max_input_chars and 32 <= char <= 126
+            ):  # Printable characters
+                input_str += chr(char)  # TODO: Make the user input appear italic.

@@ -49,7 +49,7 @@ def load_data():
         activities, logs = [], []
 
 
-def log_time_menu2(window: Window, stdscr):
+def log_time_menu(window: Window, stdscr):
     current_row = 0
     draw_title_menu(window, stdscr)
 
@@ -89,14 +89,24 @@ def log_time_menu2(window: Window, stdscr):
         print_menu(stdscr, current_row)
 
 
+def isEmptyString(string: str) -> bool:
+    return string == ""
+
+
 def create_log_menu(window: Window, stdscr):
     window.emptyOut()
     window.add_title(2, 4, "Create a New Log")
     enable_input()
 
-    log_name = window.getInputWprompt("Enter Log Name: ", MAX_CHARS)
-    duration = window.getInputWprompt("Duration (minutes): ", MAX_CHARS)
-    engagement = window.getInputWprompt("Engagement (0-5): ", MAX_CHARS)
+    log_name = window.getInputWprompt("Create Log", "Enter Log Name: ", MAX_CHARS)
+    if isEmptyString(log_name):
+        return
+    duration = window.getInputWprompt("Create Log", "Duration (minutes): ", MAX_CHARS)
+    if isEmptyString(duration):
+        return
+    engagement = window.getInputWprompt("Create Log", "Engagement (0-5): ", MAX_CHARS)
+    if isEmptyString(engagement):
+        return
 
     window.emptyOut()
     window.add_title(2, 4, "Confirm Log Creation")
@@ -170,10 +180,9 @@ def disable_input():
 
 def activity_creation_menu(window: Window, stdscr):
     window.emptyOut()
-    window.add_title(2, 4, CR_NEW_ACT)
     enable_input()
 
-    activity_name = window.getInputWprompt(ENTR_ACT_NAME, MAX_CHARS)
+    activity_name = window.getInputWprompt(CR_NEW_ACT, ENTR_ACT_NAME, MAX_CHARS)
 
     if activity_name:
         # Add activity to the list
@@ -191,10 +200,11 @@ def activity_creation_menu(window: Window, stdscr):
 
 def log_activity_menu(window: Window, stdscr, activity: Activity):
     window.emptyOut()
-    window.add_title(2, 4, f"{LOG_DATA_FOR + activity.__str__()}")
     enable_input()
 
-    duration = window.getInputWprompt(DURATION_PROMPT, MAX_CHARS)
+    duration = window.getInputWprompt(
+        LOG_DATA_FOR + activity.__str__(), DURATION_PROMPT, MAX_CHARS
+    )
 
     # Prompt for engagement, need to add function for window to do more than one prompt.
     window.add_text(5, 8, ENGAGEMENT_PROMPT)
@@ -321,15 +331,19 @@ def main_menu(stdscr):
     menu = ["Create Log", "View Logs", "Manage Activities", "Exit"]
     current_row = 0
 
-    def print_menu(selected_row_idx):
+    def print_menu(selected_row_idx, highlight=False):
         title_window.clear()
         height, width = title_window.window.getmaxyx()
         for idx, row in enumerate(menu):
             x = width // 2 - len(row) // 2
             y = height // 2 - len(menu) // 2 + idx
             if idx == selected_row_idx:
+                if highlight:
+                    title_window.window.attron(curses.A_REVERSE)
                 title_window.startColoring(1)
                 title_window.window.addstr(y, x, row)
+                if highlight:
+                    title_window.window.attroff(curses.A_REVERSE)
                 title_window.stopColoring(1)
             else:
                 title_window.window.addstr(y, x, row)
@@ -337,7 +351,6 @@ def main_menu(stdscr):
         title_window.refresh()
 
     print_menu(current_row)
-
     while True:
         key = stdscr.getch()
         if key == curses.KEY_UP and current_row > 0:
@@ -345,6 +358,13 @@ def main_menu(stdscr):
         elif key == curses.KEY_DOWN and current_row < len(menu) - 1:
             current_row += 1
         elif key == ord("\n"):
+            # Blink effect
+            for _ in range(1):  # Blink n times
+                print_menu(current_row, highlight=True)
+                curses.napms(40)  # Wait for 50 milliseconds
+                print_menu(current_row, highlight=False)
+                curses.napms(80)  # Wait for 50 milliseconds
+
             if current_row == 0:
                 create_log_menu(title_window, stdscr)
             elif current_row == 1:
@@ -355,7 +375,6 @@ def main_menu(stdscr):
                 break
         elif key == ord("q"):
             break
-
         print_menu(current_row)
 
 
