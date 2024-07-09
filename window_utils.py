@@ -185,19 +185,26 @@ class Window:
                     attribute=curses.A_DIM,
                 )
                 self.refresh()
-                curses.napms(2000)
+                curses.napms(400)
                 return ""
             elif char == 10:  # Enter
                 if input_str:
                     curses.curs_set(0)
                     self.add_text(
-                        input_y + 2,
+                        input_y,
                         input_x,
-                        "Input received!",
-                        attribute=curses.A_BOLD | curses.A_BLINK | curses.A_ITALIC,
+                        input_str,
+                        attribute=curses.A_BOLD | curses.A_BLINK | curses.A_REVERSE,
                     )
                     self.refresh()
-                    curses.napms(800)  # Display message for 1 second
+                    curses.napms(50)
+                    self.add_text(
+                        input_y,
+                        input_x,
+                        input_str,
+                        attribute=curses.A_BOLD | curses.A_BLINK,
+                    )
+                    curses.napms(50)
                     curses.curs_set(1)
                     return input_str
             elif char == curses.KEY_BACKSPACE or char == 127:  # Backspace

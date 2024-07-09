@@ -225,20 +225,94 @@ def log_activity_menu(window: Window, stdscr, activity: Activity):
     stdscr.getch()
 
 
-def logs_menu(stdscr):
+def logs_menu(window: Window, stdscr):
+    window.emptyOut()
+    window.add_title(2, 4, "Logs")
+
     if not logs:
-        stdscr.addstr(1, 0, "No Logs Created")
-    else:
+        window.add_text(4, 6, "No Logs Created")
+        window.add_text(
+            window.height - 3, 6, "Press any key to continue...", attribute=curses.A_DIM
+        )
+        window.refresh()
+        stdscr.getch()
+        return
+
+    # Calculate dimensions for split screen
+    left_width = window.width // 2
+    right_width = window.width - left_width - 1
+    content_height = window.height - 6  # Accounting for title and instructions
+
+    current_row = 0
+
+    def draw_logs_list(selected_idx):
         for idx, log in enumerate(logs):
-            activity_name = log.activity.name if log.activity else "No Activity"
-            stdscr.addstr(idx * 3 + 1, 0, f"{log.name}: {activity_name}")
-            stdscr.addstr(
-                idx * 3 + 2,
-                2,
-                f"Duration: {log.duration} minutes, Engagement: {log.engagement}",
-            )
-    stdscr.refresh()
-    stdscr.getch()
+            if idx < content_height:
+                if idx == selected_idx:
+                    window.startColoring(1)
+                    window.add_text(idx + 4, 3, f"> {log.name[:left_width-4]}")
+                    window.stopColoring(1)
+                else:
+                    window.add_text(idx + 4, 3, f"  {log.name[:left_width-4]}")
+
+    def draw_log_details(log):
+        window.add_text(4, left_width + 2, f"Name: {log.name}", wrap=True)
+        window.add_text(
+            5,
+            left_width + 2,
+            f"Activity: {log.activity.name if log.activity else 'No Activity'}",
+            wrap=True,
+        )
+        window.add_text(6, left_width + 2, f"Duration: {log.duration} minutes")
+        window.add_text(7, left_width + 2, f"Engagement: {log.engagement}")
+        # TODO: add or adjust details for logs
+
+    # Draw vertical line to split the screen
+    for y in range(4, window.height - 1):
+        window.add_text(y, left_width, "│")
+
+    window.add_text(
+        window.height - 2,
+        2,
+        "↑↓: Navigate  Enter: Select  q: Quit",
+        attribute=curses.A_DIM,
+    )
+
+    while True:
+        window.clear()
+        window.add_border()
+        window.add_title(2, 4, "Logs")
+
+        # Redraw the vertical line
+        for y in range(4, window.height - 3):
+            window.add_text(y, left_width, "│")
+
+        draw_logs_list(current_row)
+        draw_log_details(logs[current_row])
+
+        window.add_text(
+            window.height - 3,
+            4,
+            "↑↓: Navigate  Enter: Select  q: Quit",
+            attribute=curses.A_DIM,
+        )
+        window.refresh()
+
+        key = stdscr.getch()
+        if key == curses.KEY_UP and current_row > 0:
+            current_row -= 1
+        elif key == curses.KEY_DOWN and current_row < min(
+            len(logs) - 1, content_height - 1
+        ):
+            current_row += 1
+        elif key == ord("\n"):
+            # TODO: add functionality for when logs are selected
+            pass
+        elif key == ord("q"):
+            break
+
+    window.clear()
+    window.refresh()
 
 
 def draw_menu(window: Window, stdscr, title, message):
@@ -361,14 +435,14 @@ def main_menu(stdscr):
             # Blink effect
             for _ in range(1):  # Blink n times
                 print_menu(current_row, highlight=True)
-                curses.napms(40)  # Wait for 50 milliseconds
+                curses.napms(40)  # Wait for 40 milliseconds
                 print_menu(current_row, highlight=False)
-                curses.napms(80)  # Wait for 50 milliseconds
+                curses.napms(80)  # Wait for 80 milliseconds
 
             if current_row == 0:
                 create_log_menu(title_window, stdscr)
             elif current_row == 1:
-                logs_menu(stdscr)
+                logs_menu(title_window, stdscr)
             elif current_row == 2:
                 manage_activities_menu(title_window, stdscr)
             elif current_row == 3:
