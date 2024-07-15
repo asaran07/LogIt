@@ -30,17 +30,19 @@ DURATION_UNIT = " minutes"
 ENGAGEMENT_LABEL = "Engagement: "
 
 
-activities: List[Activity] = []
-logs: List[Log] = []
-SAVE_FILE = "data.pkl"
+activities: List[Activity] = []  # TODO: Move to DataManager
+
+logs: List[Log] = []  # TODO: Move to DataManager
+
+SAVE_FILE = "data.pkl"  # TODO: Move to DataManager
 
 
-def save_data():
+def save_data():  # TODO: Move to DataManager
     with open(SAVE_FILE, "wb") as f:
         pickle.dump((activities, logs), f)
 
 
-def load_data():
+def load_data():  # TODO: Move to DataManager
     global activities, logs
     if os.path.exists(SAVE_FILE):
         with open(SAVE_FILE, "rb") as f:
@@ -225,10 +227,7 @@ def log_activity_menu(window: Window, stdscr, activity: Activity):
     stdscr.getch()
 
 
-def logs_menu(window: Window, stdscr):
-    window.emptyOut()
-    window.add_title(2, 4, "Logs")
-
+def ifLogsEmpty(window: Window, stdscr):
     if not logs:
         window.add_text(4, 6, "No Logs Created")
         window.add_text(
@@ -238,11 +237,188 @@ def logs_menu(window: Window, stdscr):
         stdscr.getch()
         return
 
-    # Calculate dimensions for split screen
-    left_width = window.width // 2
-    right_width = window.width - left_width - 1
-    content_height = window.height - 6  # Accounting for title and instructions
 
+def delete_log(log, window: Window, stdscr):
+    if confirmation_menu(
+        window, stdscr, f"Are you sure you want to delete the log: {log.name}?"
+    ):
+        logs.remove(log)
+        window.clear()
+        window.add_border()
+        window.add_text(2, 4, "Log deleted successfully!", attribute=curses.A_BOLD)
+        window.add_text(4, 4, "Press any key to continue...", attribute=curses.A_DIM)
+        window.refresh()
+        stdscr.getch()
+    else:
+        window.clear()
+        window.add_border()
+        window.add_text(2, 4, "Deletion cancelled", attribute=curses.A_BOLD)
+        window.add_text(4, 4, "Press any key to continue...", attribute=curses.A_DIM)
+        window.refresh()
+        stdscr.getch()
+
+
+def assign_log_to_activity(log, window: Window, stdscr):
+    def activity_menu():
+        selected = 0
+        while True:
+            window.clear()
+            window.add_border()
+            window.add_title(2, 4, "Select an activity to assign the log to:")
+            for idx, activity in enumerate(activities):
+                if idx == selected:
+                    window.startColoring(1)
+                    window.add_text(idx + 4, 3, f"> {activity.name}")
+                    window.stopColoring(1)
+                else:
+                    window.add_text(idx + 4, 3, f"  {activity.name}")
+            window.add_text(
+                window.height - 2,
+                2,
+                "↑↓: Navigate  Enter: Select  q: Cancel",
+                attribute=curses.A_DIM,
+            )
+            window.refresh()
+
+            key = stdscr.getch()
+            if key == curses.KEY_UP and selected > 0:
+                selected -= 1
+            elif key == curses.KEY_DOWN and selected < len(activities) - 1:
+                selected += 1
+            elif key == ord("\n"):
+                return activities[selected]
+            elif key == ord("q"):
+                return None
+
+    selected_activity = activity_menu()
+    if selected_activity:
+        if confirmation_menu(
+            window,
+            stdscr,
+            f"Assign log '{log.name}' to activity '{selected_activity.name}'?",
+        ):
+            log.add_to_activity(selected_activity)
+            window.clear()
+            window.add_border()
+            window.add_text(2, 4, "Log assigned successfully!", attribute=curses.A_BOLD)
+            window.add_text(
+                4, 4, "Press any key to continue...", attribute=curses.A_DIM
+            )
+            window.refresh()
+            stdscr.getch()
+        else:
+            window.clear()
+            window.add_border()
+            window.add_text(2, 4, "Assignment cancelled", attribute=curses.A_BOLD)
+            window.add_text(
+                4, 4, "Press any key to continue...", attribute=curses.A_DIM
+            )
+            window.refresh()
+            stdscr.getch()
+
+
+def edit_log(log, window, stdscr):
+    def edit_menu():
+        options = ["Name", "Duration", "Engagement", "Cancel"]
+        selected = 0
+        while True:
+            window.clear()
+            window.add_border()
+            window.add_title(2, 4, f"Edit log: {log.name}")
+            for idx, option in enumerate(options):
+                if idx == selected:
+                    window.startColoring(1)
+                    window.add_text(idx + 4, 3, f"> {option}")
+                    window.stopColoring(1)
+                else:
+                    window.add_text(idx + 4, 3, f"  {option}")
+            window.add_text(
+                window.height - 2,
+                2,
+                "↑↓: Navigate  Enter: Select",
+                attribute=curses.A_DIM,
+            )
+            window.refresh()
+
+            key = stdscr.getch()
+            if key == curses.KEY_UP and selected > 0:
+                selected -= 1
+            elif key == curses.KEY_DOWN and selected < len(options) - 1:
+                selected += 1
+            elif key == ord("\n"):
+                return options[selected]
+
+    def get_input(prompt):
+        curses.echo()
+        window.clear()
+        window.add_border()
+        window.add_text(2, 4, prompt)
+        window.refresh()
+        input_str = stdscr.getstr(4, 4, 30).decode(UTF8)
+        curses.noecho()
+        return input_str
+
+    while True:
+        choice = edit_menu()
+        if choice == "Name":
+            new_name = get_input("Enter new name:")
+            if new_name:
+                log.name = new_name
+        elif choice == "Duration":
+            new_duration = get_input("Enter new duration (minutes):")
+            if new_duration.isdigit():
+                log.duration = int(new_duration)
+        elif choice == "Engagement":
+            new_engagement = get_input("Enter new engagement (0-5):")
+            if new_engagement.isdigit() and 0 <= int(new_engagement) <= 5:
+                log.engagement = int(new_engagement)
+        elif choice == "Cancel":
+            break
+
+        window.clear()
+        window.add_border()
+        window.add_text(2, 4, "Log updated successfully!", attribute=curses.A_BOLD)
+        window.add_text(4, 4, "Press any key to continue...", attribute=curses.A_DIM)
+        window.refresh()
+        stdscr.getch()
+
+
+# Helper function for confirmation prompts
+def confirmation_menu(window, stdscr, prompt):
+    options = ["Yes", "No"]
+    selected = 0
+    while True:
+        window.clear()
+        window.add_border()
+        window.add_title(2, 4, prompt)
+        for idx, option in enumerate(options):
+            if idx == selected:
+                window.startColoring(1)
+                window.add_text(idx + 4, 3, f"> {option}")
+                window.stopColoring(1)
+            else:
+                window.add_text(idx + 4, 3, f"  {option}")
+        window.add_text(
+            window.height - 2, 2, "↑↓: Navigate  Enter: Select", attribute=curses.A_DIM
+        )
+        window.refresh()
+
+        key = stdscr.getch()
+        if key == curses.KEY_UP and selected > 0:
+            selected -= 1
+        elif key == curses.KEY_DOWN and selected < len(options) - 1:
+            selected += 1
+        elif key == ord("\n"):
+            return options[selected] == "Yes"
+
+
+def logs_menu(window: Window, stdscr):
+    window.emptyOut()
+    window.add_title(2, 4, "Logs")
+    ifLogsEmpty(window, stdscr)
+
+    left_width = window.width // 2
+    content_height = window.height - 6
     current_row = 0
 
     def draw_logs_list(selected_idx):
@@ -265,34 +441,68 @@ def logs_menu(window: Window, stdscr):
         )
         window.add_text(6, left_width + 2, f"Duration: {log.duration} minutes")
         window.add_text(7, left_width + 2, f"Engagement: {log.engagement}")
-        # TODO: add or adjust details for logs
 
-    # Draw vertical line to split the screen
-    for y in range(4, window.height - 1):
-        window.add_text(y, left_width, "│")
+    def blink_selection(row):
+        for _ in range(1):  # Blink twice
+            window.startColoring(1)
+            window.window.attron(curses.A_REVERSE)
+            window.add_text(row + 4, 3, f"> {logs[row].name[:left_width-4]}")
+            window.window.attroff(curses.A_REVERSE)
+            window.stopColoring(1)
+            window.refresh()
+            curses.napms(40)
+            window.add_text(row + 4, 3, f"  {logs[row].name[:left_width-4]}")
+            window.refresh()
+            curses.napms(80)
 
-    window.add_text(
-        window.height - 2,
-        2,
-        "↑↓: Navigate  Enter: Select  q: Quit",
-        attribute=curses.A_DIM,
-    )
+    def action_menu(log):
+        options = [
+            "Delete the Log",
+            "Assign the Log to an activity",
+            "Edit the log",
+            "Back",
+        ]
+        selected = 0
+        while True:
+            window.clear()
+            window.add_border()
+            window.add_title(2, 4, f"Actions for: {log.name}")
+            for idx, option in enumerate(options):
+                if idx == selected:
+                    window.startColoring(1)
+                    window.add_text(idx + 4, 3, f"> {option}")
+                    window.stopColoring(1)
+                else:
+                    window.add_text(idx + 4, 3, f"  {option}")
+            window.refresh()
+
+            key = stdscr.getch()
+            if key == curses.KEY_UP and selected > 0:
+                selected -= 1
+            elif key == curses.KEY_DOWN and selected < len(options) - 1:
+                selected += 1
+            elif key == ord("\n"):
+                if selected == 0:
+                    delete_log(log, window, stdscr)
+                elif selected == 1:
+                    assign_log_to_activity(log, window, stdscr)
+                elif selected == 2:
+                    edit_log(log, window, stdscr)
+                else:
+                    break
+            window.refresh()
 
     while True:
         window.clear()
         window.add_border()
         window.add_title(2, 4, "Logs")
-
-        # Redraw the vertical line
         for y in range(4, window.height - 3):
             window.add_text(y, left_width, "│")
-
         draw_logs_list(current_row)
         draw_log_details(logs[current_row])
-
         window.add_text(
-            window.height - 3,
-            4,
+            window.height - 2,
+            2,
             "↑↓: Navigate  Enter: Select  q: Quit",
             attribute=curses.A_DIM,
         )
@@ -306,8 +516,8 @@ def logs_menu(window: Window, stdscr):
         ):
             current_row += 1
         elif key == ord("\n"):
-            # TODO: add functionality for when logs are selected
-            pass
+            blink_selection(current_row)
+            action_menu(logs[current_row])
         elif key == ord("q"):
             break
 
