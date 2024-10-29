@@ -1,5 +1,9 @@
 # LogIt
 
+### Usage Preview:
+
+https://github.com/user-attachments/assets/cd173bd2-c4de-47e0-b480-9fd746713b33
+
 ### The Origin
 The idea for this project came from an assignment in one of my classes where at the end of each week, we had to turn in a reflection detailing what we worked on, the time spent, and engagement levels for those activities.
 
