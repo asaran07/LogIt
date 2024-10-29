@@ -249,6 +249,7 @@ def delete_log(log, window: Window, stdscr):
         window.add_text(4, 4, "Press any key to continue...", attribute=curses.A_DIM)
         window.refresh()
         stdscr.getch()
+        return True
     else:
         window.clear()
         window.add_border()
@@ -256,6 +257,7 @@ def delete_log(log, window: Window, stdscr):
         window.add_text(4, 4, "Press any key to continue...", attribute=curses.A_DIM)
         window.refresh()
         stdscr.getch()
+        return False
 
 
 def assign_log_to_activity(log, window: Window, stdscr):
@@ -415,7 +417,15 @@ def confirmation_menu(window, stdscr, prompt):
 def logs_menu(window: Window, stdscr):
     window.emptyOut()
     window.add_title(2, 4, "Logs")
-    ifLogsEmpty(window, stdscr)
+
+    if not logs:
+        window.add_text(4, 6, "No Logs Created")
+        window.add_text(
+            window.height - 3, 6, "Press any key to continue...", attribute=curses.A_DIM
+        )
+        window.refresh()
+        stdscr.getch()
+        return
 
     left_width = window.width // 2
     content_height = window.height - 6
@@ -483,7 +493,8 @@ def logs_menu(window: Window, stdscr):
                 selected += 1
             elif key == ord("\n"):
                 if selected == 0:
-                    delete_log(log, window, stdscr)
+                    if delete_log(log, window, stdscr):
+                        return True # log deleated
                 elif selected == 1:
                     assign_log_to_activity(log, window, stdscr)
                 elif selected == 2:
@@ -491,8 +502,23 @@ def logs_menu(window: Window, stdscr):
                 else:
                     break
             window.refresh()
+        return False # log not deleted
 
     while True:
+        if not logs:
+            window.clear()
+            window.add_border()
+            window.add_text(4, 6, "No logs remaining")
+            window.add_text(
+                window.height - 3, 6, "Press any key to continue...", attribute=curses.A_DIM
+            )
+            window.refresh()
+            stdscr.getch()
+            break
+
+        if current_row >= len(logs):
+            current_row = len(logs) - 1
+
         window.clear()
         window.add_border()
         window.add_title(2, 4, "Logs")
@@ -517,7 +543,8 @@ def logs_menu(window: Window, stdscr):
             current_row += 1
         elif key == ord("\n"):
             blink_selection(current_row)
-            action_menu(logs[current_row])
+            if action_menu(logs[current_row]):  # If log was deleted
+                continue  # skip the rest of the loop and start over
         elif key == ord("q"):
             break
 
