@@ -7,6 +7,7 @@ class Task:
         self.total_seconds_worked = 0  # accumulator for all active working time
         self.start_time = None
         self.is_paused = True  # start in paused state
+        self.time_goal_minutes = 0
 
     def start(self):
         """Reset and start new timer."""

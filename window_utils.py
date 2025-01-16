@@ -140,7 +140,7 @@ class Window:
         self.window.border()
         self.refresh()
 
-    def getInputWprompt(
+    def getInputWithPrompt(
         self,
         title_string: str,
         prompt_string: str,
