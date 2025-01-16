@@ -141,7 +141,10 @@ class Window:
         self.refresh()
 
     def getInputWprompt(
-        self, title_string: str, prompt_string: str, max_input_chars: int
+        self,
+        title_string: str,
+        prompt_string: str,
+        max_input_chars: int,  # TODO: Add parameter for dynamic cancel message
     ) -> str:
         self.clear()
         self.draw_border()
@@ -175,7 +178,7 @@ class Window:
                 self.add_text(
                     2,
                     4,
-                    "[i] log creation canceled",
+                    "[i] log creation canceled",  # BUG: Static 'log' message for all scenarios
                     attribute=curses.A_BLINK | curses.A_BOLD | curses.A_ITALIC,
                 )
                 self.add_text(

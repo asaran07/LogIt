@@ -1,10 +1,12 @@
 import curses
 import os
 import pickle
+import time
 from typing import List
 
 from activity import Activity
 from log import Log
+from task import Task
 from window_utils import Window
 
 # Constants for menu titles and messages
@@ -31,7 +33,7 @@ ENGAGEMENT_LABEL = "Engagement: "
 
 
 activities: List[Activity] = []  # TODO: Move to DataManager
-
+tasks = []
 logs: List[Log] = []  # TODO: Move to DataManager
 
 SAVE_FILE = "data.pkl"  # TODO: Move to DataManager
@@ -436,10 +438,10 @@ def logs_menu(window: Window, stdscr):
             if idx < content_height:
                 if idx == selected_idx:
                     window.startColoring(1)
-                    window.add_text(idx + 4, 3, f"> {log.name[:left_width-4]}")
+                    window.add_text(idx + 4, 3, f"> {log.name[: left_width - 4]}")
                     window.stopColoring(1)
                 else:
-                    window.add_text(idx + 4, 3, f"  {log.name[:left_width-4]}")
+                    window.add_text(idx + 4, 3, f"  {log.name[: left_width - 4]}")
 
     def draw_log_details(log):
         window.add_text(4, left_width + 2, f"Name: {log.name}", wrap=True)
@@ -456,12 +458,12 @@ def logs_menu(window: Window, stdscr):
         for _ in range(1):  # Blink twice
             window.startColoring(1)
             window.window.attron(curses.A_REVERSE)
-            window.add_text(row + 4, 3, f"> {logs[row].name[:left_width-4]}")
+            window.add_text(row + 4, 3, f"> {logs[row].name[: left_width - 4]}")
             window.window.attroff(curses.A_REVERSE)
             window.stopColoring(1)
             window.refresh()
             curses.napms(40)
-            window.add_text(row + 4, 3, f"  {logs[row].name[:left_width-4]}")
+            window.add_text(row + 4, 3, f"  {logs[row].name[: left_width - 4]}")
             window.refresh()
             curses.napms(80)
 
@@ -494,7 +496,7 @@ def logs_menu(window: Window, stdscr):
             elif key == ord("\n"):
                 if selected == 0:
                     if delete_log(log, window, stdscr):
-                        return True # log deleated
+                        return True  # log deleated
                 elif selected == 1:
                     assign_log_to_activity(log, window, stdscr)
                 elif selected == 2:
@@ -502,7 +504,7 @@ def logs_menu(window: Window, stdscr):
                 else:
                     break
             window.refresh()
-        return False # log not deleted
+        return False  # log not deleted
 
     while True:
         if not logs:
@@ -510,7 +512,10 @@ def logs_menu(window: Window, stdscr):
             window.add_border()
             window.add_text(4, 6, "No logs remaining")
             window.add_text(
-                window.height - 3, 6, "Press any key to continue...", attribute=curses.A_DIM
+                window.height - 3,
+                6,
+                "Press any key to continue...",
+                attribute=curses.A_DIM,
             )
             window.refresh()
             stdscr.getch()
@@ -635,11 +640,147 @@ def view_edit_activities_menu(window: Window, stdscr):
     pass  # Placeholder for now
 
 
+def manage_tasks_menu(window: Window, stdscr):
+    while True:
+        window.emptyOut()
+        window.add_title(2, 4, "Manage Tasks")
+        window.add_text(4, 6, "1. Create new task")
+        window.add_text(5, 6, "2. Start/Pause/Resume/Stop a task")
+        window.add_text(6, 6, "3. Back to main menu")
+
+        key = stdscr.getch()
+        if key == ord("1"):
+            create_task(window, stdscr)
+        elif key == ord("2"):
+            tasks_screen(window, stdscr)
+        elif key in [ord("3"), ord("q")]:
+            break
+
+
+def create_task(window: Window, stdscr):
+    window.emptyOut()
+    enable_input()
+
+    task_name = window.getInputWprompt("New Task", "Enter Task Name: ", MAX_CHARS)
+    if task_name:
+        new_task = Task(task_name)
+        tasks.append(new_task)
+        window.emptyOut()
+        window.add_text(4, 6, f"Task '{task_name}' created!")
+        window.add_text(35, 8, KEY_FOR_CONTINUE)
+        disable_input()
+        stdscr.getch()
+    else:
+        disable_input()
+
+
+def tasks_screen(window: Window, stdscr):
+    if not tasks:
+        window.emptyOut()
+        window.add_text(4, 6, "No tasks available.")
+        window.add_text(35, 8, "Press any key to continue...")
+        stdscr.getch()
+        return
+
+    current_row = 0
+    while True:
+        window.emptyOut()
+        window.add_title(2, 4, "Select a Task to work on (Enter) or 'q' to return")
+
+        for idx, t in enumerate(tasks):
+            display = f"{t.name} (paused)" if t.is_paused else f"{t.name} (running)"
+            if idx == current_row:
+                window.startColoring(1)
+                window.add_text(idx + 4, 6, f"> {display}")
+                window.stopColoring(1)
+            else:
+                window.add_text(idx + 4, 6, f"  {display}")
+
+        key = stdscr.getch()
+        if key == curses.KEY_UP and current_row > 0:
+            current_row -= 1
+        elif key == curses.KEY_DOWN and current_row < len(tasks) - 1:
+            current_row += 1
+        elif key == ord("\n"):
+            run_task_timer(window, stdscr, tasks[current_row])
+        elif key == ord("q"):
+            break
+
+
+def run_task_timer(window: Window, stdscr, task: Task):
+    # Always starting fresh at the moment, can modify to save task data later if needed
+    task.start()
+
+    paused_message = "Timer Paused. Press 'r' to resume, 's' to stop."
+    running_message = "Timer Running. Press 'p' to pause, 's' to stop."
+
+    while True:
+        window.emptyOut()
+        window.add_title(2, 4, f"Working on: {task.name}")
+
+        # Calculate displayed time in minutes:seconds
+        total_elapsed = task.total_seconds_worked
+        if not task.is_paused:
+            total_elapsed += time.time() - task.start_time
+
+        minutes = int(total_elapsed // 60)
+        seconds = int(total_elapsed % 60)
+
+        window.add_text(4, 6, f"Time Elapsed: {minutes:02d}:{seconds:02d}")
+        status = paused_message if task.is_paused else running_message
+        window.add_text(6, 6, status)
+
+        window.refresh()
+
+        # Wait ~1s while letting curses check for input
+        stdscr.nodelay(True)  # non-blocking
+        curses.napms(1000)
+        key = stdscr.getch()
+        stdscr.nodelay(False)  # revert to blocking
+
+        if key == ord("p") and not task.is_paused:
+            task.pause()
+        elif key == ord("r") and task.is_paused:
+            task.start()
+        elif key == ord("s"):
+            # Stop the task and create a Log
+            total_minutes = task.stop()
+            create_log_from_task(window, stdscr, task, total_minutes)
+            break
+        # If user hits 'q' forcibly? maybe make this the discard option?
+        # elif key == ord("q"):
+        #     break
+
+
+def create_log_from_task(window: Window, stdscr, task: Task, total_minutes: int):
+    enable_input()
+    engagement_str = window.getInputWprompt(
+        "Stop Task", "Enter engagement (0-5): ", MAX_CHARS
+    )
+    disable_input()
+
+    if not engagement_str:
+        return
+
+    new_log = Log(task.name, total_minutes, int(engagement_str))
+    logs.append(new_log)
+
+    add_log_to_activity_menu(window, stdscr, new_log)
+
+    # Possibly reset the Task to re-use the same Task in the future
+    # or we can remove it from `tasks` if it’s “complete" (still need to add a way to complete).
+    # tasks.remove(task)
+    window.emptyOut()
+    window.add_text(4, 6, f"Task '{task.name}' has been converted to a log.")
+    window.add_text(35, 8, KEY_FOR_CONTINUE)
+    stdscr.getch()
+
+
 def main_menu(stdscr):
     title_window = Window(40, 120)
     draw_title_menu(title_window, stdscr)
     curses.curs_set(0)
-    menu = ["Create Log", "View Logs", "Manage Activities", "Exit"]
+    menu = ["Create Log", "View Logs", "Manage Activities", "Manage Tasks", "Exit"]
     current_row = 0
 
     def print_menu(selected_row_idx, highlight=False):
@@ -683,6 +824,8 @@ def main_menu(stdscr):
             elif current_row == 2:
                 manage_activities_menu(title_window, stdscr)
             elif current_row == 3:
+                manage_tasks_menu(title_window, stdscr)
+            elif current_row == 4:
                 break
         elif key == ord("q"):
             break
